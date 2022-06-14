@@ -145,10 +145,7 @@ void getColor(const uint len, string cols, string word, bool *irCols, vector <pa
   }
 
 }
-
-int main() {
-  const uint len = 5;
-  const uint rounds = 6;
+bool playGame(const uint len, const uint rounds) {
   string word, cols;
   bool *irCols = (bool*)malloc(len * sizeof(bool));
   vector <pair <char, int> > vals;
@@ -160,10 +157,24 @@ int main() {
   for (uint i = 0; i < rounds; ++i) {
     cols = getCols(i, word);
     if (cols == "done") {
-      break;
+      return 1;
+    } else if (cols == "reset") {
+      return 0;
     } else {
       getColor(len, cols, word, irCols, &vals, &semis, &exts, &mins, &invs);
       sieve(len, i, vals, semis, exts, mins, invs);
+    }
+  }
+  return 0;
+}
+
+int main() {
+  const uint len = 5;
+  const uint rounds = 6;
+  bool isPlay = 1;
+  while (isPlay) {
+    if (playGame(len, rounds)) {
+      isPlay = 0;
     }
   }
   return 0;
