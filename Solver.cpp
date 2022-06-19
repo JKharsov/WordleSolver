@@ -144,7 +144,7 @@ int main() {
   bool doRun = 1;
   vector <tuple <char, uint, bool> > vals;
   vector <tuple <char, uint, bool> > nums;
-  //import(len, "wordList.txt", fileName);
+  //import(len, "wordFreqs.txt", fileName);
   while(doRun) {
     for (uint r = 0; r < rds; ++r) {
       if (!play_simple(r, len, fileName, irCols, vals, nums)) {
