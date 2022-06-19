@@ -1,181 +1,157 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <vector>
-//clang++ -std=c++20 Solver.cpp
+#include <tuple>
+//clang++ -std=c++20 main.cpp
 using namespace std;
-
-string getCols(const uint i, string &word) {
-  string cols;
-  ifstream wFile ("SievedFile" + std::to_string(i) + ".txt");
-  while (getline (wFile, word) ) {
-    cout << "The word is " << word << ". Please type in the colors; g = green, y = yellow, r = grey" << endl;
-    cin >> cols;
-    if (cols == "done") {
-      wFile.close();
-      return "done";
-    } else if (cols == "redo") {
-      continue;
-    } else {
-      break;
+void import(const uint len, const string word_list, const string fileName) {
+  string word;
+  ifstream word_file(word_list);
+  ofstream sieved_file(fileName + "0.txt");
+  while(getline(word_file, word)) {
+    if (word.length() == len) {
+      sieved_file << word << endl;
     }
   }
-  wFile.close();
-  return cols;
+  word_file.close();
+  sieved_file.close();
 }
-uint getCount(const char let, const string word) {
-  uint count = 0;
+uint get_num(const char let, const string word) {
+  uint num = 0;
   for (uint i = 0; i < word.length(); ++i) {
     if (word[i] == let) {
-      ++count;
+      ++num;
     }
   }
-  return count;
+  return num;
 }
-bool isValid(const uint len, const string word, vector <pair <char, int> > vals, vector <pair <char, int> > semis, vector <pair <char, int> > exts, vector <pair <char, int> > mins, vector <char> invs) {
+bool is_valid(const string word, const vector <tuple <char, uint, bool> > vals, const vector <tuple <char, uint, bool> > nums) {
   for (auto val = vals.begin(); val != vals.end(); ++val) {
-    if (word[val -> second] != val -> first) {
-      return 0;
+    if (!get<bool>(*val)) {
+      if (word[get<uint>(*val)] != get<char>(*val)) {
+        return 0;
+      }
+    } else {
+      if (word[get<uint>(*val)] == get<char>(*val)) {
+        return 0;
+      }
     }
   }
-  for (auto semi = semis.begin(); semi != semis.end(); ++semi) {
-    if (word[semi -> second] == semi -> first) {
-      return 0;
-    }
-  }
-  for (auto ext = exts.begin(); ext != exts.end(); ++ext) {
-    if (getCount(ext -> first, word) < ext -> second) {
-      return 0;
-    }
-  }
-  for (auto min = mins.begin(); min != mins.end(); ++min) {
-    if (getCount(min -> first, word) < min -> second) {
-      return 0;
-    }
-  }
-  for (auto inv = invs.begin(); inv != invs.end(); ++inv) {
-    for (uint i = 0; i < len; ++i) {
-      if (*inv == word[i]) {
+  for (auto num = nums.begin(); num != nums.end(); ++num) {
+    if (!get<bool>(*num)) {
+      if (get_num(get<char>(*num), word) < get<uint>(*num)) {
+        return 0;
+      }
+    } else {
+      if (get_num(get<char>(*num), word) != get<uint>(*num)) {
         return 0;
       }
     }
   }
   return 1;
 }
-void import(const uint len, const string wList) {
+void sieve(const uint i, const string fileName, const vector <tuple <char, uint, bool> > vals, const vector <tuple <char, uint, bool> > nums) {
   string word;
-  ifstream wFile (wList);
-  ofstream sFile ("SievedFile0.txt");
-  while(getline(wFile, word)) {
-    if (word.length() == len) {
-      sFile << word << endl;
+  ifstream word_file(fileName + to_string(i) + ".txt");
+  ofstream sieved_file(fileName + to_string(i + 1) + ".txt");
+  while(getline(word_file, word)) {
+    if (is_valid(word, vals, nums)) {
+      sieved_file << word << endl;
     }
   }
-  wFile.close();
-  sFile.close();
+  word_file.close();
+  sieved_file.close();
 }
-void sieve(const uint len, uint i, vector <pair <char, int> > vals, vector <pair <char, int> > semis, vector <pair <char, int> > exts, vector <pair <char, int> > mins, vector <char> invs) {
-  string word;
-  ifstream wFile ("SievedFile" + std::to_string(i) + ".txt");
-  ofstream sFile ("SievedFile" + std::to_string(i + 1) + ".txt");
-  while(getline(wFile, word)) {
-    if (isValid(len, word, vals, semis, exts, mins, invs)) {
-      sFile << word << "\n";
-    }
+void clear(const uint i, const uint e, const string fileName) {
+  for (uint j = i; j < e + 1; ++j) {
+    filesystem::remove(fileName + to_string(j) + ".txt");
   }
-  wFile.close();
-  sFile.close();
 }
-void getColor(const uint len, string cols, string word, bool *irCols, vector <pair <char, int> > *vals, vector <pair <char, int> > *semis, vector <pair <char, int> > *exts, vector <pair <char, int> > *mins, vector <char> *invs) {
-  uint count, oType;
-  for (uint i = 0; i < len; ++i) {
-    for (uint j = i; j < len; ++j) {
-      if (word[i] == word[j]) {
-        if (cols[i] == 'r' && cols[j] != 'r') {
-          semis -> push_back(make_pair(word[i], i));
-          cols[i] = 'n';
-        } else if (cols[i] != 'r' && cols[j] == 'r') {
-          semis -> push_back(make_pair(word[j], j));
-          cols[j] = 'n';
-        }
-      }
-    }
-    if (irCols[i]) {
-      continue;
-    } else if (cols[i] == 'g') {
-      vals -> push_back(make_pair(word[i], i));
-      irCols[i] = 1;
-    } else if (cols[i] == 'y') {
-      semis -> push_back(make_pair(word[i], i));
-    } else if (cols[i] == 'r') {
-      invs -> push_back(word[i]);
-    }
-  }
-  for (uint i = 0; i < len; ++i) {
-    if (cols[i] == 'y') {
-      count = 1;
-      oType = 0;
-      for (uint j = i + 1; j < len; ++j) {
-        if (word[i] == word[j]) {
-          if (cols[j] == 'g' || cols[j] == 'y') {
-            ++count;
-          } else {
-            oType = 1;
-          }
-          cols[j] = 'r';
-        }
-      }
-      if (oType) {
-        exts -> push_back( make_pair(word[i], count) );
+bool get_numType(const uint i, const uint len, const string word, string &colors, uint &num) {
+  bool numType = 0;
+  for (uint j = i + 1; j < len; ++j) {
+    if (word[i] == word[j]) {
+      if (colors[j] == 'g') {
+        colors[j] = 'h';
+        ++num;
+      } else if (colors[j] == 'y') {
+        colors[j] = 'z';
+        ++num;
       } else {
-        mins -> push_back( make_pair(word[i], count) );
+        colors[j] = 's';
+        numType = 1;
       }
-    }
-    if (cols[i] ==  'n') {
-      count = 0;
-      for (uint j = i + 1; j < len; ++j) {
-        if (word[i] == word[j]) {
-          if (cols[j] == 'g' || cols[j] == 'y') {
-            ++count;
-          }
-          cols[j] = 'r';
-        }
-      }
-      exts -> push_back( make_pair(word[i], count) );
     }
   }
-
+  return numType;
 }
-bool playGame(const uint len, const uint rounds) {
-  string word, cols;
-  bool *irCols = (bool*)malloc(len * sizeof(bool));
-  vector <pair <char, int> > vals;
-  vector <pair <char, int> > semis;
-  vector <pair <char, int> > exts;
-  vector <pair <char, int> > mins;
-  vector <char> invs;
-  import(len, "wordList.txt");
-  for (uint i = 0; i < rounds; ++i) {
-    cols = getCols(i, word);
-    if (cols == "done") {
-      return 1;
-    } else if (cols == "reset") {
+void set_colors(const uint len, const string word, string colors, bool *irCols, vector <tuple <char, uint, bool> > &vals, vector <tuple <char, uint, bool> > &nums) {
+  uint num;
+  bool numType;
+  for (uint i = 0; i < len; ++i) {
+    if (colors[i] == 'g' && !irCols[i]) {
+      vals.push_back(make_tuple(word[i], i, 0));
+      irCols[i] = 1;
+      num = 1;
+      numType = get_numType(i, len, word, colors, num);
+      if (num != 1) {
+        nums.push_back(make_tuple(word[i], num, numType));
+      }
+    } else if (colors[i] == 'h') {
+      vals.push_back(make_tuple(word[i], i, 0));
+      irCols[i] = 1;
+    } else if (colors[i] == 'y') {
+      vals.push_back(make_tuple(word[i], i, 1));
+      num = 1;
+      numType = get_numType(i, len, word, colors, num);
+      nums.push_back(make_tuple(word[i], num, numType));
+    } else if (colors[i] == 'z') {
+      vals.push_back(make_tuple(word[i], i, 1));
+    } else if (colors[i] == 'r') {
+      num = 0;
+      get_numType(i, len, word, colors, num);
+      nums.push_back(make_tuple(word[i], num, 1));
+    }
+  }
+}
+bool play_simple(const uint r, const uint len, const string fileName, bool *irCols, vector <tuple <char, uint, bool> > &vals, vector <tuple <char, uint, bool> > &nums) {
+  string word, colors;
+  ifstream word_file(fileName + to_string(r) + ".txt");
+  while(getline(word_file, word)) {
+    cout << word << endl;
+    cin >> colors;
+    if (colors == "redo") {
+      continue;
+    } else if (colors == "done") {
+      word_file.close();
       return 0;
     } else {
-      getColor(len, cols, word, irCols, &vals, &semis, &exts, &mins, &invs);
-      sieve(len, i, vals, semis, exts, mins, invs);
+      break;
     }
   }
-  return 0;
+  set_colors(len, word, colors, irCols, vals, nums);
+  sieve(r, fileName, vals, nums);
+  word_file.close();
+  return 1;
 }
 
 int main() {
   const uint len = 5;
-  const uint rounds = 6;
-  bool isPlay = 1;
-  while (isPlay) {
-    if (playGame(len, rounds)) {
-      isPlay = 0;
+  const uint rds = 6;
+  const string fileName = "sievedFile";
+  bool *irCols = (bool*)malloc(len * sizeof(bool));
+  bool doRun = 1;
+  vector <tuple <char, uint, bool> > vals;
+  vector <tuple <char, uint, bool> > nums;
+  //import(len, "wordList.txt", fileName);
+  while(doRun) {
+    for (uint r = 0; r < rds; ++r) {
+      if (!play_simple(r, len, fileName, irCols, vals, nums)) {
+        doRun = 0;
+      }
     }
   }
+  clear(1, rds, fileName);
   return 0;
 }
